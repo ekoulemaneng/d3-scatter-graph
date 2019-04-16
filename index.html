@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta http-equiv="X-UA-Compatible" content="ie=edge">
+        <title>D3 Scatterplot Graph</title>
+        <script src='https://d3js.org/d3.v4.min.js'></script>
+        <style>
+        /*---------------------------------------Reset CSS-----------------------------------------*/
+html, body, div, span, applet, object, iframe,
+h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+a, abbr, acronym, address, big, cite, code,
+del, dfn, em, img, ins, kbd, q, s, samp,
+small, strike, strong, sub, sup, tt, var,
+b, u, i, center,
+dl, dt, dd, ol, ul, li,
+fieldset, form, label, legend,
+table, caption, tbody, tfoot, thead, tr, th, td,
+article, aside, canvas, details, embed, 
+figure, figcaption, footer, header, hgroup, 
+menu, nav, output, ruby, section, summary,
+time, mark, audio, video {
+margin: 0;
+padding: 0;
+border: 0;
+font-size: 100%;
+font: inherit;
+vertical-align: baseline;
+}
+/* HTML5 display-role reset for older browsers */
+article, aside, details, figcaption, figure, 
+footer, header, hgroup, menu, nav, section {
+display: block;
+}
+body {
+line-height: 1;
+}
+ol, ul {
+list-style: none;
+}
+blockquote, q {
+quotes: none;
+}
+blockquote:before, blockquote:after,
+q:before, q:after {
+content: '';
+content: none;
+}
+table {
+border-collapse: collapse;
+border-spacing: 0;
+}
+/*---------------------------------------------------------------*/
+
+body {
+    background-color: cadetblue;
+}
+
+main {
+    width: 80%;
+    height: 100%;
+    margin: 2.5rem auto auto;
+    background-color: white;
+}
+
+h2 {
+    text-align: center;
+    font-size: 1.5rem;
+}
+
+svg {
+    display: block;
+    margin: auto;
+}
+
+circle {
+    r: 6;
+}
+
+#title {
+    text-align: center;
+    font-size: 2rem;
+    font-weight: 100;
+    padding-top: .5rem;
+    padding-bottom: .5rem;
+}
+        </style>
+    </head>
+    <body>
+        <main>
+            <h1 id="title">Doping in Professional Bicycle Racing</h1>
+            <h2>35 Fastest times up Alpe_d'Huez</h2>
+        </main>
+        <script>
+        const url = 'https://raw.githubusercontent.com/freeCodeCamp/ProjectReferenceData/master/cyclist-data.json';
+const w = 1000;
+const h = 600;
+const padding = 60;
+
+d3.json(url, function(error, dataset){  
+    
+    const svgContainer = d3.select('main').append('svg').attr('width', w).attr('height', h);
+
+    const xMin = d3.min(dataset, (d) => new Date(d['Year'] - 1, 0));
+    const xMax = d3.max(dataset, (d) => new Date(d['Year'] + 1, 0));
+    const yMin = d3.min(dataset, (d) => {
+        let date = new Date((d['Seconds'] - 5) * 1000);
+        date.setHours(date.getUTCHours());
+        return date;
+    });
+    const yMax = d3.max(dataset, (d) => {
+        let date = new Date((d['Seconds'] + 10) * 1000);
+        date.setHours(date.getUTCHours());
+        return date;
+    });
+
+    console.log(xMin);
+    console.log(xMax);
+
+    const xScale = d3.scaleTime().domain([xMin, xMax]).range([padding, w - padding]);
+    const yScale = d3.scaleTime().domain([yMin, yMax]).range([h - padding, padding]);
+
+    const xAxis = d3.axisBottom(xScale);
+    const yAxis = d3.axisLeft(yScale).tickFormat(d3.timeFormat("%M:%S"));
+
+    let dot = svgContainer.selectAll('circle').data(dataset).enter().append('circle').attr('class', 'dot');
+
+    let tooltip = svgContainer.append('text').attr('id', 'tooltip').style('visibility', 'hidden');
+
+    let legend = svgContainer.append('g').attr('id', 'legend');
+
+    svgContainer.append('g').attr('id', 'x-axis').attr('class', 'tick').attr('transform', "translate(0, " + (h - padding) + ")").call(xAxis);
+    svgContainer.append('g').attr('id', 'y-axis').attr('class', 'tick').attr('transform', 'translate(' + padding + ', 0)').call(yAxis);
+
+    dot.attr('data-xvalue', (d) => d['Year']).attr('data-yvalue', (d) => {
+        let date = new Date(d['Seconds'] * 1000);
+        return date.toISOString();
+    }).attr('cx', (d) => {
+        let date = new Date(d['Year'], 0);
+        return xScale(date);
+    }).attr('cy', (d) => {
+        let date = new Date(d['Seconds'] * 1000);
+        date.setHours(date.getUTCHours());
+        return yScale(date);
+    }).attr('fill', (d) => d['Doping'] === "" ? 'green' : 'red').on(
+        'mouseover', (d) => {
+        let dateX = new Date(d['Year'], 0);
+        let dateY = new Date(d['Seconds'] * 1000);
+        let X = xScale(dateX) + 10;
+        dateY.setHours(dateY.getUTCHours());
+        tooltip.attr(
+            'data-year', d['Year']
+            ).attr(
+                'x', xScale(dateX)
+                ).attr(
+                    'y', yScale(dateY)
+                    ).style(
+                        'visibility', 'visible'
+                        ).html(
+                            "<tspan dx='10' dy='5'>" + d["Name"] + ", " + d["Nationality"] + "</tspan>" +
+                            "<tspan x='" + X + "' dy='20'>" + "Year: " + d["Year"] + "</tspan>" +
+                            "<tspan x='" + X + "' dy='20'>" + "Time:" + d["Time"] + "</tspan>" +
+                            "<tspan x='" + X + "' dy='20'>" + d["Doping"] + "</tspan>"
+                            );
+    }).on('mouseout', (d) => tooltip.style('visibility', 'hidden'));
+
+    legend.append('rect').attr('width', 10).attr('height', 10).attr('x', 750).attr('y', 280).style('fill', 'red');
+    legend.append('text').attr('x', 770).attr('y', 290).text('Riders with doping allegations');
+    legend.append('rect').attr('width', 10).attr('height', 10).attr('x', 750).attr('y', 300).style('fill', 'green');
+    legend.append('text').attr('x', 770).attr('y', 310).text('No doping allegations');
+
+    svgContainer.append('text').attr('x', -200).attr('y', 15).style('transform', 'rotate(-90deg)').text('Time (in minute)');
+    svgContainer.append('text').attr('x', 900).attr('y', 575).text('Year');
+});
+        </script>
+        <script src="https://cdn.freecodecamp.org/testable-projects-fcc/v1/bundle.js"></script>
+    </body>
+</html>
