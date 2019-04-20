@@ -115,9 +115,6 @@ d3.json(url, function(error, dataset){
         return date;
     });
 
-    console.log(xMin);
-    console.log(xMax);
-
     const xScale = d3.scaleTime().domain([xMin, xMax]).range([padding, w - padding]);
     const yScale = d3.scaleTime().domain([yMin, yMax]).range([h - padding, padding]);
 
